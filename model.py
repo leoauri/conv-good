@@ -10,7 +10,6 @@ class Buffer(nn.Module):
         self.data = torch.zeros(128)
 
     def push(self, x):
-        # self.data = torch.cat((x, self.data[:-1]))
         self.data = self.data.roll(1, 0)
         self.data[0] = x
 
