@@ -3,10 +3,13 @@ from TCN.TCN.tcn import TemporalConvNet
 import torch
 from torch import nn
 from torch import Tensor
+import auraloss
+from utils import tone
 
 #%%
 class Buffer(nn.Module):
     def __init__(self):
+        super(Buffer, self).__init__()
         self.data = torch.zeros(128)
 
     def push(self, x):
@@ -42,19 +45,18 @@ class TCN(nn.Module):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
         output = self.tcn(self.buffer.data.view(1,1,-1))
 
+        # it's the -1th element, right, which is temporally dependant on the history?
         output = self.linear(output[:, :, -1]).squeeze()
-        print(output.shape)
+        # print(output.shape)
 
         self.buffer.push(output)
         return output
 
 
+
+# %% tests
 model = TCN()
 
-
-
-
-# %%
 pre_shape = model.buffer.data.shape
 model()
 # print(model.buffer.data.shape)
@@ -62,6 +64,40 @@ assert model.buffer.data.shape == pre_shape
 model()
 # print(model.buffer.data.shape)
 assert model.buffer.data.shape == pre_shape
+del(model)
 
+#%%
+import matplotlib.pyplot as plt
+# %%
+def train(model, epochs, y, lossfn, optimizer):
+    model.train()
+    for i in range(epochs):
+        print(f'Epoch {i} ', end=None)
+        samples = len(y)
+        outputs = torch.zeros((samples))
+        for i in range(samples):
+            outputs[i] = model()
+
+        loss = lossfn(outputs.view((1,-1)), y.view((1,-1)))
+        print(f'- loss: {loss}')
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        plt.plot(outputs.detach())
+        plt.show()
+
+    return outputs
+
+#%%
+model = TCN()
+y = Tensor(tone(220, sr=48000, length=1024))
+print(y.view((1,-1)).shape)
+lossfn = auraloss.freq.STFTLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+
+#%%
+train(model, 5, y, lossfn, optimizer)
 
 # %%
