@@ -10,6 +10,9 @@ from utils import tone
 class Buffer(nn.Module):
     def __init__(self):
         super(Buffer, self).__init__()
+        self.reset()
+
+    def reset(self):
         self.data = torch.zeros(128)
 
     def push(self, x):
@@ -83,6 +86,7 @@ def train(model, epochs, y, lossfn, optimizer):
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
+        model.buffer.reset()
 
         plt.plot(outputs.detach())
         plt.show()
